@@ -82,8 +82,9 @@ class FanSpeedCommand : public Command
     int prevSpeed;
 
 public:
-    FanSpeedCommand(Fan &fan, int speed) : mFan(&fan)
+    FanSpeedCommand(Fan *fan, int speed)
     {
+        mFan = fan;
         newSpeed = speed;
     }
 
@@ -154,29 +155,29 @@ int main()
 
     std::shared_ptr<Command> command1(new FanSpeedCommand(&fan, 1)); // create command for switching to channel 1
     history.executeCmd(command1);
-    std::cout << "switched to channel " << fan.getSpeed() << std::endl;
+    std::cout << "set fan speed to: " << fan.getSpeed() << std::endl;
 
     std::shared_ptr<Command> command2(new FanSpeedCommand(&fan, 2)); // create command for switching to channel 2
     history.executeCmd(command2);
-    std::cout << "switched to channel: " << fan.getSpeed() << std::endl;
+    std::cout << "set fan speed to: " << fan.getSpeed() << std::endl;
 
     std::shared_ptr<Command> command3(new FanSpeedCommand(&fan, 3)); // create command for switching to channel 3
     history.executeCmd(command3);
-    std::cout << "switched to channel: " << fan.getSpeed() << std::endl;
+    std::cout << "set fan speed to: " << fan.getSpeed() << std::endl;
 
-    std::cout << "undoing..." << std::endl;
+    std::cout << "undo performed" << std::endl;
     history.undo();
-    std::cout << "current channel: " << fan.getSpeed() << std::endl;
+    std::cout << "current speed: " << fan.getSpeed() << std::endl;
 
-    std::cout << "undoing..." << std::endl;
+    std::cout << "undo performed" << std::endl;
     history.undo();
-    std::cout << "current channel: " << fan.getSpeed() << std::endl;
+    std::cout << "current speed: " << fan.getSpeed() << std::endl;
 
-    std::cout << "redoing..." << std::endl;
+    std::cout << "redo performed" << std::endl;
     history.redo();
-    std::cout << "current channel: " << fan.getSpeed() << std::endl;
+    std::cout << "current speed: " << fan.getSpeed() << std::endl;
 
-    std::cout << "redoing..." << std::endl;
+    std::cout << "redo performed" << std::endl;
     history.redo();
     std::cout << "current channel: " << fan.getSpeed() << std::endl;
 
