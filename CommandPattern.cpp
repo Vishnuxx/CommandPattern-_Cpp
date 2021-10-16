@@ -12,114 +12,136 @@ public:
 };
 
 // ----- the MODEL -----
-class Fan {
+class Fan
+{
 
-    bool isOn;
-
+    bool on;
     int speed;
 
 public:
-    Fan() { }
+    Fan() {}
 
-    void switchOn() {
-
-        isOn = true;
-
-    }
-    void switchOff() { 
-
-        isOn = false; 
-
+    void switchOn()
+    {
+        on = true;
     }
 
-    void switchChannel(int speed) {
+    void switchOff()
+    {
+        on = false;
+    }
 
+    void setSpeed(int speed)
+    {
         speed = speed;
-
     }
 
-    bool isOn() { 
-
-        return isOn; 
-
+    bool isOn()
+    {
+        return on;
     }
 
-    int getChannel() { 
-        
-        return speed; 
-        
+    int getSpeed()
+    {
+        return speed;
     }
 };
 
 // ----- concrete ICommand commands -----
-class FanOnCommand : public Command {
+class FanOnCommand : public Command
+{
 
     Fan *mFan;
 
 public:
-    FanOnCommand(Fan &fan) : mFan(&fan) { }
-    void execute() { 
-        
-        mFan->switchOn(); 
-        
+    FanOnCommand(Fan &fan) : mFan(&fan) {}
+
+    void execute()
+    {
+        mFan->switchOn();
     }
 
-    void undo() { 
-        
-        mFan->switchOff(); 
-        
+    void undo()
+    {
+        mFan->switchOff();
     }
 
-    void redo() { 
-
-        mFan->switchOn(); 
-        
+    void redo()
+    {
+        mFan->switchOn();
     }
 };
 
 //set fan speed command
 
-class 
-
-
-
-// ----- our CONTROLLER with undo/redo -----
-typedef std::stack<std::shared_ptr<ICommand> > commandStack_t;
-
-class CommandManager
+class FanSpeedCommand : public Command
 {
-    commandStack_t mUndoStack;
-    commandStack_t mRedoStack;
+
+    Fan *mFan;
+    int newSpeed;
+    int prevSpeed;
 
 public:
-    CommandManager() {}
-
-    void executeCmd(std::shared_ptr<ICommand> command)
+    FanSpeedCommand(Fan &fan, int speed) : mFan(&fan)
     {
-        mRedoStack = commandStack_t(); // clear the redo stack
-        command->execute();
-        mUndoStack.push(command);
+        newSpeed = speed;
     }
+
+    void execute()
+    {
+        prevSpeed = mFan->getSpeed();
+        mFan->setSpeed(newSpeed);
+    }
+
     void undo()
     {
-        if (mUndoStack.size() <= 0)
-        {
-            return;
-        }
-        mUndoStack.top()->undo();          // undo most recently executed command
-        mRedoStack.push(mUndoStack.top()); // add undone command to undo stack
-        mUndoStack.pop();                  // remove top entry from undo stack
+        mFan->setSpeed(prevSpeed);
     }
 
     void redo()
     {
-        if (mRedoStack.size() <= 0)
+        mFan->setSpeed(newSpeed);
+    }
+};
+
+typedef std::stack<std::shared_ptr<Command> > commandStack_t;
+
+class HistoryManager
+{
+
+    commandStack_t undoStack;
+    commandStack_t redoStack;
+
+public:
+    HistoryManager() {}
+
+    void executeCmd(std::shared_ptr<Command> command)
+    {
+        redoStack = commandStack_t();
+        command->execute();
+        undoStack.push(command);
+    }
+
+    void undo()
+    {
+        if (undoStack.size() <= 0)
         {
             return;
         }
-        mRedoStack.top()->redo();          // redo most recently executed command
-        mUndoStack.push(mRedoStack.top()); // add undone command to redo stack
-        mRedoStack.pop();                  // remove top entry from redo stack
+        undoStack.top()->undo();
+        redoStack.push(undoStack.top());
+        undoStack.pop();
+    }
+
+    void redo()
+    {
+        if (redoStack.size() <= 0)
+        {
+            return;
+        }
+        redoStack.top()->redo();
+        undoStack.push(redoStack.top());
+        redoStack.pop();
     }
 };
 
@@ -127,36 +149,36 @@ int main()
 {
     using namespace std;
 
-    Tv tv;
-    CommandManager commandManager;
+    Fan fan;
+    HistoryManager history;
 
-    std::shared_ptr<ICommand> c1(new TvSwitchChannelCommand(&tv, 1)); // create command for switching to channel 1
-    commandManager.executeCmd(c1);
-    std::cout << "switched to channel " << tv.getChannel() << std::endl;
+    std::shared_ptr<Command> command1(new FanSpeedCommand(&fan, 1)); // create command for switching to channel 1
+    history.executeCmd(command1);
+    std::cout << "switched to channel " << fan.getSpeed() << std::endl;
 
-    std::shared_ptr<ICommand> c2(new TvSwitchChannelCommand(&tv, 2)); // create command for switching to channel 2
-    commandManager.executeCmd(c2);
-    std::cout << "switched to channel: " << tv.getChannel() << std::endl;
+    std::shared_ptr<Command> command2(new FanSpeedCommand(&fan, 2)); // create command for switching to channel 2
+    history.executeCmd(command2);
+    std::cout << "switched to channel: " << fan.getSpeed() << std::endl;
 
-    std::shared_ptr<ICommand> c3(new TvSwitchChannelCommand(&tv, 3)); // create command for switching to channel 3
-    commandManager.executeCmd(c3);
-    std::cout << "switched to channel: " << tv.getChannel() << std::endl;
-
-    std::cout << "undoing..." << std::endl;
-    commandManager.undo();
-    std::cout << "current channel: " << tv.getChannel() << std::endl;
+    std::shared_ptr<Command> command3(new FanSpeedCommand(&fan, 3)); // create command for switching to channel 3
+    history.executeCmd(command3);
+    std::cout << "switched to channel: " << fan.getSpeed() << std::endl;
 
     std::cout << "undoing..." << std::endl;
-    commandManager.undo();
-    std::cout << "current channel: " << tv.getChannel() << std::endl;
+    history.undo();
+    std::cout << "current channel: " << fan.getSpeed() << std::endl;
+
+    std::cout << "undoing..." << std::endl;
+    history.undo();
+    std::cout << "current channel: " << fan.getSpeed() << std::endl;
 
     std::cout << "redoing..." << std::endl;
-    commandManager.redo();
-    std::cout << "current channel: " << tv.getChannel() << std::endl;
+    history.redo();
+    std::cout << "current channel: " << fan.getSpeed() << std::endl;
 
     std::cout << "redoing..." << std::endl;
-    commandManager.redo();
-    std::cout << "current channel: " << tv.getChannel() << std::endl;
+    history.redo();
+    std::cout << "current channel: " << fan.getSpeed() << std::endl;
 
     return 0;
 }
